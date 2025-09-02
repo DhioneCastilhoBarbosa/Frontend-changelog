@@ -1,4 +1,4 @@
-import { ClipboardList, Lock, Mail, User } from "lucide-react";
+import { ClipboardList, Lock, Mail, User, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "../services/api";
@@ -7,31 +7,45 @@ import React from "react";
 export default function SignUp() {
   const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
+  const [showPwd, setShowPwd] = React.useState(false);
+  const [showConfirm, setShowConfirm] = React.useState(false);
+
   const [form, setForm] = React.useState({
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const update =
-    (key: "name" | "email" | "password") =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
+    (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const mismatch =
+    form.confirmPassword.length > 0 && form.password !== form.confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (loading) return;
+
+    if (mismatch) {
+      toast.error("As senhas não coincidem.");
+      return;
+    }
+    if (form.password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Se seu axios já tem baseURL = https://api-changelog.intelbras-cve-pro.com.br/api
-      // use apenas "/users". Caso não tenha, use a URL completa abaixo.
       await api.post("/users", {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
       });
       toast.success(
-        "Cadastro realizado com sucesso! Entre em contato com a equipe de CVE para ativar sua conta.",
+        "Cadastro realizado. Contate a equipe de CVE para ativar sua conta.",
         { closeButton: true }
       );
       navigate("/login");
@@ -45,7 +59,7 @@ export default function SignUp() {
       ) {
         const response = (
           err as { response?: { data?: { message?: string }; status?: number } }
-        ).response;
+        ).response as any;
         msg =
           response?.data?.message ||
           (response?.status === 409
@@ -127,29 +141,98 @@ export default function SignUp() {
           </label>
 
           {/* Senha */}
-          <label className="flex items-center gap-2 border-2 border-sky-300 p-2 rounded-md w-full transition-colors focus-within:border-sky-500 focus-within:bg-sky-50 dark:focus-within:bg-zinc-800">
+          <label
+            className={`flex items-center gap-2 border-2 p-2 rounded-md w-full transition-colors focus-within:border-sky-500 focus-within:bg-sky-50 dark:focus-within:bg-zinc-800 ${
+              mismatch ? "border-rose-400" : "border-sky-300"
+            }`}
+          >
             <Lock className="w-5 h-5 text-sky-500" />
             <div className="flex flex-row items-center gap-2 w-full">
               <span className="text-sm text-gray-600 dark:text-gray-300">
                 Senha:
               </span>
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={update("password")}
-                className="bg-transparent outline-none border-none text-black dark:text-white placeholder:text-gray-400 w-full"
-                placeholder="Crie uma senha"
-                autoComplete="new-password"
-                minLength={6}
-                required
-              />
+              <div className="relative w-full flex items-center">
+                <input
+                  type={showPwd ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={update("password")}
+                  className="bg-transparent outline-none border-none text-black dark:text-white placeholder:text-gray-400 w-full pr-8"
+                  placeholder="Crie uma senha"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                  aria-invalid={mismatch}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((s) => !s)}
+                  aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={showPwd}
+                  className="absolute right-0 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  {showPwd ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
           </label>
 
+          {/* Confirmar Senha */}
+          <label
+            className={`flex items-center gap-2 border-2 p-2 rounded-md w-full transition-colors focus-within:border-sky-500 focus-within:bg-sky-50 dark:focus-within:bg-zinc-800 ${
+              mismatch ? "border-rose-400" : "border-sky-300"
+            }`}
+          >
+            <Lock className="w-5 h-5 text-sky-500" />
+            <div className="flex flex-row items-center gap-2 w-full">
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                Confirmar:
+              </span>
+              <div className="relative w-full flex items-center">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={update("confirmPassword")}
+                  className="bg-transparent outline-none border-none text-black dark:text-white placeholder:text-gray-400 w-full pr-8"
+                  placeholder="Repita a senha"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                  aria-invalid={mismatch}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((s) => !s)}
+                  aria-label={
+                    showConfirm ? "Ocultar confirmação" : "Mostrar confirmação"
+                  }
+                  aria-pressed={showConfirm}
+                  className="absolute right-0 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  {showConfirm ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </label>
+
+          {mismatch && (
+            <p className="w-full text-xs text-rose-600 -mt-2">
+              As senhas não coincidem.
+            </p>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || mismatch}
             className="bg-sky-500 text-white p-2 rounded-md w-full hover:bg-sky-600 transition cursor-pointer disabled:opacity-60"
           >
             {loading ? "Cadastrando..." : "Cadastrar"}
