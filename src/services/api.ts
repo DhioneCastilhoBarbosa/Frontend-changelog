@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://changelog.intelbras-cve-pro.com.br/api", // Substitua pela URL da sua API
+  baseURL: "https://api-changelog.intelbras-cve-pro.com.br/api", // Substitua pela URL da sua API
 });
 
 api.interceptors.request.use((config) => {
