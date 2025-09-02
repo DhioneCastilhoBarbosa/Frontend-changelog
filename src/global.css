@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+
+@theme {
+  --font-sans: "Roboto", sans-serif;
+}
+
+@layer utilities {
+  input:-webkit-autofill {
+    box-shadow: 0 0 0 1000px transparent inset !important;
+    -webkit-text-fill-color: inherit !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  html.dark input:-webkit-autofill {
+    -webkit-text-fill-color: #fff !important; /* texto branco no dark mode */
+  }
+
+  html.light input:-webkit-autofill {
+    -webkit-text-fill-color: #000 !important; /* texto preto no light mode */
+  }
+}
+body {
+  @apply bg-neutral-950 text-white;
+  @apply font-sans;
+}
