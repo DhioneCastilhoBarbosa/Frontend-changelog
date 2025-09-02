@@ -521,9 +521,6 @@ export default function ReleaseTable() {
                                   </li>
                                 </ul>
 
-                                <h4 className="font-semibold mt-4 mb-2">
-                                  Meta
-                                </h4>
                                 <ul className="text-sm list-disc pl-5 space-y-1">
                                   <li>
                                     Versão anterior: {r.previousVersion || "-"}
