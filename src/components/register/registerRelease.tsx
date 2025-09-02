@@ -131,12 +131,15 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
           </div>
           <div>
             <label className="text-xs block mb-1">Categoria</label>
-            <input
+            <select
               className={commonInput}
               value={value.productCategory}
               onChange={(e) => setField({ productCategory: e.target.value })}
-              placeholder="AC"
-            />
+            >
+              <option value="">Selecione...</option>
+              <option value="AC">AC</option>
+              <option value="DC">DC</option>
+            </select>
           </div>
           <div>
             <label className="text-xs block mb-1">Status</label>
@@ -160,7 +163,7 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
             />
           </div>
           <div className="col-span-2">
-            <label className="text-xs block mb-1">Importante</label>
+            <label className="text-xs block mb-1">Nota</label>
             <textarea
               className={commonInput}
               rows={3}

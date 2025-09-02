@@ -869,11 +869,12 @@ const EditModal = memo(function EditModal({
                 />
               </div>
               <div className="col-span-2">
-                <label className="text-xs block mb-1">Importante</label>
-                <input
+                <label className="text-xs block mb-1">Nota</label>
+                <textarea
                   className={common}
                   value={(modal.data as any).importantNote ?? ""}
                   onChange={(e) => setField({ importantNote: e.target.value })}
+                  rows={4}
                 />
               </div>
               <div className="col-span-2 grid grid-cols-2 gap-3">
