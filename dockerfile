@@ -9,5 +9,5 @@ RUN npm run build
 FROM nginx:alpine
 COPY --from=build /app/dist /app/dist
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 8085
+EXPOSE 8087
 CMD ["nginx", "-g", "daemon off;"]
