@@ -460,11 +460,13 @@ export default function CreateReleasePage() {
             response?.data !== null &&
             "message" in response.data
             ? (response.data as { message?: string }).message
-            : "Falha ao criar release. Veja o console."
+            : "Falha ao salvar release. Seu usuário pode não ter permissão para esta ação."
         );
       } else {
         console.error("POST /releases error:", err);
-        toast.error("Falha ao criar release. Veja o console.");
+        toast.error(
+          "Falha ao salvar release. Seu usuário pode não ter permissão para esta ação."
+        );
       }
       // Se seu axios tiver interceptor que desloga em 401, isso ainda pode ocorrer.
       // Caso não queira redirecionar no 401 aqui, remova lógica de logout automática no interceptor.

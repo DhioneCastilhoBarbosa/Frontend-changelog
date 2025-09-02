@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Inbox } from "lucide-react";
 import api from "../../../services/api";
+import { toast } from "sonner";
 
 type ReleaseModule = {
   id: number;
@@ -304,9 +305,9 @@ export default function ReleaseTable() {
         err?.response?.status,
         err?.response?.data
       );
-      alert(
+      toast.error(
         err?.response?.data?.message ||
-          "Falha ao salvar release. Veja o console."
+          "Falha ao salvar release. Seu usuário pode não ter permissão para esta ação."
       );
     } finally {
       setSaving(false);
