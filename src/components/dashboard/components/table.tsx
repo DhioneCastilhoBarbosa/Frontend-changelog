@@ -190,7 +190,12 @@ export default function ReleaseTable() {
     });
   const closeModal = () => setModal({ open: false });
 
-  // ===== Helpers para PUT completo =====
+  // ===== Helpers =====
+  const sanitize = <T extends object>(obj: T) => {
+    const { id, createdAt, updatedAt, ...rest } = obj as any;
+    return rest as T;
+  };
+
   function toApiDate(v?: string) {
     if (!v) return undefined;
     if (/^\d{4}-\d{2}-\d{2}$/.test(v))
@@ -204,12 +209,12 @@ export default function ReleaseTable() {
     return normalize(res.data as Release);
   }
 
-  // ajuste: não envie category no payload
+  // não envie category nos entries e nunca mande timestamps/ids
   function buildReleaseUpdatePayload(base: Release, updates: Partial<Release>) {
     const releaseDateISO =
       toApiDate(updates.releaseDate ?? base.releaseDate) ?? base.releaseDate;
 
-    return {
+    const payload = {
       version: updates.version ?? base.version,
       previousVersion: updates.previousVersion ?? base.previousVersion,
       ota: typeof updates.ota === "boolean" ? updates.ota : base.ota,
@@ -224,13 +229,14 @@ export default function ReleaseTable() {
         version: m.version,
         updated: m.updated,
       })),
-      // sem category
       entries: (base.entries || []).map((e) => ({
         itemOrder: e.itemOrder,
         classification: e.classification,
         observation: e.observation,
       })),
     };
+
+    return sanitize(payload);
   }
 
   // Confirm helpers
@@ -325,7 +331,6 @@ export default function ReleaseTable() {
         const mods = [...(fresh.modules ?? [])];
 
         if (modal.mode === "add") {
-          // adiciona novo (id será ignorado no payload)
           mods.push({
             id: 0 as any,
             module: d.module ?? "",
@@ -333,7 +338,6 @@ export default function ReleaseTable() {
             updated: !!d.updated,
           });
         } else {
-          // edita pelo id do módulo, mas salva via release
           for (let i = 0; i < mods.length; i++) {
             if (mods[i].id === d.id) {
               mods[i] = {
@@ -839,13 +843,17 @@ const EditModal = memo(function EditModal({
               </div>
               <div>
                 <label className="text-xs block mb-1">Categoria</label>
-                <input
+                <select
                   className={common}
                   value={(modal.data as any).productCategory ?? ""}
                   onChange={(e) =>
                     setField({ productCategory: e.target.value })
                   }
-                />
+                >
+                  <option value="">Selecione...</option>
+                  <option value="AC">AC</option>
+                  <option value="DC">DC</option>
+                </select>
               </div>
               <div>
                 <label className="text-xs block mb-1">Status</label>
