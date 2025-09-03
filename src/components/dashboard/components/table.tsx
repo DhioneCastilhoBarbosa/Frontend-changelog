@@ -311,10 +311,7 @@ export default function ReleaseTable() {
         err?.response?.status,
         err?.response?.data
       );
-      toast.error(
-        err?.response?.data?.message ||
-          "Falha ao salvar release. Seu usuário pode não ter permissão para esta ação."
-      );
+      toast.error(err?.response?.data?.message || "Falha ao salvar release.");
     } finally {
       setSaving(false);
     }
