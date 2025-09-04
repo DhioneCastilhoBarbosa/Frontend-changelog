@@ -10,7 +10,6 @@ type ReleaseLink = {
   description: string;
   url: string;
 };
-
 type ReleaseModule = {
   id: number;
   module: string;
@@ -37,14 +36,13 @@ type Release = {
   status: "revisao" | "producao" | "descontinuado" | string;
   modules: ReleaseModule[] | undefined | null;
   entries: ReleaseEntry[] | undefined | null;
-  links: ReleaseLink[] | undefined | null; // <- NOVO
+  links: ReleaseLink[] | undefined | null;
   createdAt: string;
   updatedAt: string;
 };
 
 type ModalMode = "add" | "edit";
 type ModalType = "release" | "module" | "entry" | "link";
-
 type ModalState =
   | {
       open: true;
@@ -136,7 +134,6 @@ export default function ReleaseTable() {
     return `${base} bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-gray-300`;
   };
 
-  // Novo helper para rótulo exibido
   const labelStatus = (status: Release["status"]) => {
     const s = String(status ?? "").toLowerCase();
     if (s === "producao") return "Produção";
@@ -145,7 +142,6 @@ export default function ReleaseTable() {
     return String(status ?? "");
   };
 
-  // Openers
   const openLinkAdd = (r: Release) =>
     setModal({
       open: true,
@@ -187,6 +183,7 @@ export default function ReleaseTable() {
         status: r.status,
       },
     });
+
   const openModuleAdd = (r: Release) =>
     setModal({
       open: true,
@@ -195,6 +192,7 @@ export default function ReleaseTable() {
       release: normalize(r),
       data: { module: "", version: "", updated: false },
     });
+
   const openModuleEdit = (r: Release, m: ReleaseModule) =>
     setModal({
       open: true,
@@ -208,6 +206,7 @@ export default function ReleaseTable() {
         updated: m.updated,
       },
     });
+
   const openEntryAdd = (r: Release) =>
     setModal({
       open: true,
@@ -221,6 +220,7 @@ export default function ReleaseTable() {
         observation: "",
       },
     });
+
   const openEntryEdit = (r: Release, e: ReleaseEntry) =>
     setModal({
       open: true,
@@ -235,9 +235,9 @@ export default function ReleaseTable() {
         observation: e.observation,
       },
     });
+
   const closeModal = () => setModal({ open: false });
 
-  // ===== Helpers =====
   const sanitize = <T extends object>(obj: T) => {
     const { id, createdAt, updatedAt, ...rest } = obj as any;
     return rest as T;
@@ -256,11 +256,9 @@ export default function ReleaseTable() {
     return normalize(res.data as Release);
   }
 
-  // não envie category nos entries e nunca mande timestamps/ids
   function buildReleaseUpdatePayload(base: Release, updates: Partial<Release>) {
     const releaseDateISO =
       toApiDate(updates.releaseDate ?? base.releaseDate) ?? base.releaseDate;
-
     const payload = {
       version: updates.version ?? base.version,
       previousVersion: updates.previousVersion ?? base.previousVersion,
@@ -281,18 +279,15 @@ export default function ReleaseTable() {
         classification: e.classification,
         observation: e.observation,
       })),
-      // <- NOVO
       links: (base.links || []).map((l) => ({
         module: l.module,
         description: l.description,
         url: l.url,
       })),
     };
-
     return sanitize(payload);
   }
 
-  // Confirm helpers
   function confirmDelete(
     title: string,
     message: string,
@@ -310,7 +305,6 @@ export default function ReleaseTable() {
       setConfirm({ open: false } as any);
     }
   }
-  // helper opcional, lida com id ausente/0
   function sameLink(a: ReleaseLink, b: Partial<ReleaseLink>) {
     if (a.id && b.id) return a.id === b.id;
     return (
@@ -325,10 +319,10 @@ export default function ReleaseTable() {
       "Excluir Firmware",
       `Confirma excluir o link "${l.description}" da release #${r.id}?`,
       async () => {
-        await putReleaseWith(r.id, (fresh) => {
-          const links = (fresh.links ?? []).filter((x) => !sameLink(x, l));
-          return { ...fresh, links };
-        });
+        await putReleaseWith(r.id, (fresh) => ({
+          ...fresh,
+          links: (fresh.links ?? []).filter((x) => !sameLink(x, l)),
+        }));
       }
     );
 
@@ -346,10 +340,10 @@ export default function ReleaseTable() {
       "Excluir Módulo",
       `Confirma excluir o módulo "${m.module}" da release #${r.id}?`,
       async () => {
-        await putReleaseWith(r.id, (fresh) => {
-          const mods = (fresh.modules ?? []).filter((x) => x.id !== m.id);
-          return { ...fresh, modules: mods };
-        });
+        await putReleaseWith(r.id, (fresh) => ({
+          ...fresh,
+          modules: (fresh.modules ?? []).filter((x) => x.id !== m.id),
+        }));
       }
     );
 
@@ -360,14 +354,12 @@ export default function ReleaseTable() {
       async () => {
         await putReleaseWith(r.id, (fresh) => {
           const ents = (fresh.entries ?? []).filter((x) => x.id !== e.id);
-          // reordena itemOrder para manter sequência 1..n (opcional)
           const reindexed = ents.map((x, i) => ({ ...x, itemOrder: i + 1 }));
           return { ...fresh, entries: reindexed };
         });
       }
     );
 
-  // helper para aplicar mutações e dar PUT na release
   async function putReleaseWith(
     releaseId: number,
     transform: (fresh: Release) => Release
@@ -384,7 +376,6 @@ export default function ReleaseTable() {
     try {
       const rId = modal.release.id;
       const d = modal.data as Partial<ReleaseLink>;
-
       const isUrl = (u?: string) => !!u && /^https?:\/\/\S+/i.test(u);
       if (
         modal.mode === "add" &&
@@ -396,10 +387,8 @@ export default function ReleaseTable() {
         setSaving(false);
         return;
       }
-
       await putReleaseWith(rId, (fresh) => {
         const links = [...(fresh.links ?? [])];
-
         if (modal.mode === "add") {
           links.push({
             id: 0 as any,
@@ -422,7 +411,6 @@ export default function ReleaseTable() {
         }
         return { ...fresh, links };
       });
-
       await getData();
       closeModal();
     } finally {
@@ -460,10 +448,8 @@ export default function ReleaseTable() {
     try {
       const rId = modal.release.id;
       const d = modal.data as Partial<ReleaseModule>;
-
       await putReleaseWith(rId, (fresh) => {
         const mods = [...(fresh.modules ?? [])];
-
         if (modal.mode === "add") {
           mods.push({
             id: 0 as any,
@@ -487,7 +473,6 @@ export default function ReleaseTable() {
         }
         return { ...fresh, modules: mods };
       });
-
       await getData();
       closeModal();
     } finally {
@@ -495,17 +480,14 @@ export default function ReleaseTable() {
     }
   }
 
-  // ajuste: saveEntry sem category
   async function saveEntry() {
     if (!modal.open || modal.type !== "entry") return;
     setSaving(true);
     try {
       const rId = modal.release.id;
       const d = modal.data as Partial<ReleaseEntry>;
-
       await putReleaseWith(rId, (fresh) => {
         const ents = [...(fresh.entries ?? [])];
-
         if (modal.mode === "add") {
           ents.push({
             id: 0 as any,
@@ -531,7 +513,6 @@ export default function ReleaseTable() {
         }
         return { ...fresh, entries: ents };
       });
-
       await getData();
       closeModal();
     } finally {
@@ -571,347 +552,371 @@ export default function ReleaseTable() {
 
       {/* Lista */}
       <div className="overflow-hidden rounded-xl shadow-lg ring-1 ring-slate-200 dark:ring-zinc-700">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
-          <thead className="bg-gray-100 dark:bg-zinc-800">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold">ID</th>
-              <th className="px-4 py-3 text-left font-semibold">Versão</th>
-              <th className="px-4 py-3 text-left font-semibold">Categoria</th>
-              <th className="px-4 py-3 text-left font-semibold">Produto</th>
-              <th className="px-4 py-3 text-left font-semibold">Criado em</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
-              <th className="px-4 py-3 text-right font-semibold">Detalhes</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-700">
-            {pageData.map((r) => {
-              const expanded = expandedId === r.id;
-              const mods = r.modules ?? [];
-              const ents = r.entries ?? [];
-              return (
-                <React.Fragment key={r.id}>
-                  <tr className="align-top">
-                    <td className="px-4 py-3">{r.id}</td>
-                    <td className="px-4 py-3">{r.version}</td>
-                    <td className="px-4 py-3">{r.productCategory}</td>
-                    <td className="px-4 py-3">{r.productName}</td>
-                    <td className="px-4 py-3">{fmtDate(r.createdAt)}</td>
-                    <td className="px-4 py-3">
-                      <span className={statusPill(r.status)}>
-                        {labelStatus(r.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => setExpandedId(expanded ? null : r.id)}
-                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
-                        aria-expanded={expanded}
-                        aria-controls={`release-details-${r.id}`}
-                      >
-                        <span className="text-xs">
-                          {expanded ? "Recolher" : "Expandir"}
+        {/* ADIÇÃO: scroller responsivo sem alterar botões */}
+        <div
+          className="overflow-x-auto md:overflow-visible"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
+            <thead className="bg-gray-100 dark:bg-zinc-800">
+              <tr className="whitespace-nowrap">
+                <th className="px-4 py-3 text-left font-semibold">ID</th>
+                <th className="px-4 py-3 text-left font-semibold">Versão</th>
+                <th className="px-4 py-3 text-left font-semibold">Categoria</th>
+                <th className="px-4 py-3 text-left font-semibold">Produto</th>
+                <th className="px-4 py-3 text-left font-semibold">Criado em</th>
+                <th className="px-4 py-3 text-left font-semibold">Status</th>
+                <th className="px-4 py-3 text-right font-semibold">Detalhes</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-700">
+              {pageData.map((r) => {
+                const expanded = expandedId === r.id;
+                const mods = r.modules ?? [];
+                const ents = r.entries ?? [];
+                return (
+                  <React.Fragment key={r.id}>
+                    <tr className="align-top">
+                      <td className="px-4 py-3">{r.id}</td>
+                      <td className="px-4 py-3">{r.version}</td>
+                      <td className="px-4 py-3">{r.productCategory}</td>
+                      <td className="px-4 py-3">{r.productName}</td>
+                      <td className="px-4 py-3">{fmtDate(r.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <span className={statusPill(r.status)}>
+                          {labelStatus(r.status)}
                         </span>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${
-                            expanded ? "rotate-180" : ""
-                          }`}
-                        />
-                      </button>
-                    </td>
-                  </tr>
-
-                  {expanded && (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        id={`release-details-${r.id}`}
-                        className="px-0 pb-4"
-                      >
-                        <div className="mt-2 mb-3 px-4">
-                          <div className="rounded-lg border border-gray-200 dark:border-zinc-700 p-4 bg-gray-50 dark:bg-zinc-800">
-                            <div className="space-y-6">
-                              <section>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-semibold">Resumo</h4>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => openReleaseEdit(r)}
-                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                    >
-                                      Editar Release
-                                    </button>
-                                    <button
-                                      onClick={() => askDeleteRelease(r)}
-                                      className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
-                                    >
-                                      Excluir Release
-                                    </button>
-                                  </div>
-                                </div>
-                                <ul className="text-sm list-disc pl-5 space-y-1">
-                                  <li>Produto: {r.productName}</li>
-                                  <li>Categoria: {r.productCategory}</li>
-                                  <li>Status: {labelStatus(r.status)}</li>
-                                  <li>
-                                    Data de Cadastro: {fmtDate(r.createdAt)}
-                                  </li>
-                                </ul>
-
-                                <ul className="text-sm list-disc pl-5 space-y-1">
-                                  <li>
-                                    Versão anterior: {r.previousVersion || "-"}
-                                  </li>
-                                  <li>
-                                    Atualização via OTA: {r.ota ? "sim" : "não"}
-                                  </li>
-                                  {r.otaObs && (
-                                    <li>
-                                      Observação para atualização: {r.otaObs}
-                                    </li>
-                                  )}
-                                  <li>
-                                    Data da Release: {fmtDate(r.releaseDate)}
-                                  </li>
-                                  {r.importantNote && (
-                                    <li>Nota: {r.importantNote}</li>
-                                  )}
-                                </ul>
-                              </section>
-
-                              <section>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-semibold">Módulos</h4>
-                                  <button
-                                    onClick={() => openModuleAdd(r)}
-                                    className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                  >
-                                    Adicionar Módulo
-                                  </button>
-                                </div>
-                                {(mods.length ?? 0) === 0 ? (
-                                  <p className="text-sm text-gray-500">
-                                    Sem módulos
-                                  </p>
-                                ) : (
-                                  <table className="w-full text-sm border border-gray-200 dark:border-zinc-700 rounded-md overflow-hidden">
-                                    <thead className="bg-gray-100 dark:bg-zinc-900">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left">
-                                          Módulo
-                                        </th>
-                                        <th className="px-3 py-2 text-left">
-                                          Versão
-                                        </th>
-                                        <th className="px-3 py-2 text-left">
-                                          Atualizado
-                                        </th>
-                                        <th className="px-3 py-2 text-right">
-                                          Ações
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {(mods ?? []).map((m) => (
-                                        <tr
-                                          key={m.id}
-                                          className="border-t border-gray-200 dark:border-zinc-700"
-                                        >
-                                          <td className="px-3 py-2">
-                                            {m.module}
-                                          </td>
-                                          <td className="px-3 py-2">
-                                            {m.version}
-                                          </td>
-                                          <td className="px-3 py-2">
-                                            {m.updated ? "sim" : "não"}
-                                          </td>
-                                          <td className="px-3 py-2 text-right space-x-2">
-                                            <button
-                                              onClick={() =>
-                                                openModuleEdit(r, m)
-                                              }
-                                              className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                            >
-                                              Editar
-                                            </button>
-                                            <button
-                                              onClick={() =>
-                                                askDeleteModule(r, m)
-                                              }
-                                              className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
-                                            >
-                                              Excluir
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                )}
-                              </section>
-
-                              <section>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-semibold">Registros</h4>
-                                  <button
-                                    onClick={() => openEntryAdd(r)}
-                                    className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                  >
-                                    Adicionar Registro
-                                  </button>
-                                </div>
-                                {(ents.length ?? 0) === 0 ? (
-                                  <p className="text-sm text-gray-500">
-                                    Sem registros
-                                  </p>
-                                ) : (
-                                  <ul className="space-y-2 text-sm">
-                                    {(ents ?? []).map((e) => (
-                                      <li
-                                        key={e.id}
-                                        className="p-2 rounded-md border border-gray-200 dark:border-zinc-700"
-                                      >
-                                        <div className="flex justify-between mb-1">
-                                          <span className="font-medium">
-                                            #{e.itemOrder} • {e.classification}
-                                          </span>
-                                          <div className="flex items-center gap-2">
-                                            {e.category && (
-                                              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-zinc-700">
-                                                {e.category}
-                                              </span>
-                                            )}
-                                            <button
-                                              onClick={() =>
-                                                openEntryEdit(r, e)
-                                              }
-                                              className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                            >
-                                              Editar
-                                            </button>
-                                            <button
-                                              onClick={() =>
-                                                askDeleteEntry(r, e)
-                                              }
-                                              className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
-                                            >
-                                              Excluir
-                                            </button>
-                                          </div>
-                                        </div>
-                                        <p className="text-gray-700 dark:text-gray-300">
-                                          {e.observation}
-                                        </p>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </section>
-
-                              {/* FIRMWARES (links) */}
-                              <section>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-semibold">Firmwares</h4>
-                                  <button
-                                    onClick={() => openLinkAdd(r)}
-                                    className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                  >
-                                    Adicionar Firmware
-                                  </button>
-                                </div>
-
-                                {!r.links || r.links.length === 0 ? (
-                                  <p className="text-sm text-gray-500">
-                                    Sem firmwares
-                                  </p>
-                                ) : (
-                                  <table className="w-full text-sm border border-gray-200 dark:border-zinc-700 rounded-md overflow-hidden">
-                                    <thead className="bg-gray-100 dark:bg-zinc-900">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left">
-                                          Módulo
-                                        </th>
-                                        <th className="px-3 py-2 text-left">
-                                          Descrição
-                                        </th>
-                                        <th className="px-3 py-2 text-left">
-                                          URL
-                                        </th>
-                                        <th className="px-3 py-2 text-right">
-                                          Ações
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {(r.links ?? []).map((l) => (
-                                        <tr
-                                          key={l.id}
-                                          className="border-t border-gray-200 dark:border-zinc-700"
-                                        >
-                                          <td className="px-3 py-2">
-                                            {l.module}
-                                          </td>
-                                          <td className="px-3 py-2">
-                                            {l.description}
-                                          </td>
-                                          <td className="px-3 py-2">
-                                            <a
-                                              href={l.url}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className="text-blue-600 hover:underline break-all"
-                                            >
-                                              {l.url}
-                                            </a>
-                                          </td>
-                                          <td className="px-3 py-2 text-right space-x-2">
-                                            <button
-                                              onClick={() => openLinkEdit(r, l)}
-                                              className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                            >
-                                              Editar
-                                            </button>
-                                            <button
-                                              onClick={() =>
-                                                askDeleteLink(r, l)
-                                              }
-                                              className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
-                                            >
-                                              Excluir
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                )}
-                              </section>
-                            </div>
-                          </div>
-                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : r.id)}
+                          className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+                          aria-expanded={expanded}
+                          aria-controls={`release-details-${r.id}`}
+                        >
+                          <span className="text-xs">
+                            {expanded ? "Recolher" : "Expandir"}
+                          </span>
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform ${
+                              expanded ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
 
-            {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
-                >
-                  <Inbox
-                    className="w-16 h-16 mx-auto mb-2 text-gray-400 dark:text-gray-500"
-                    strokeWidth={1}
-                  />
-                  Nenhum resultado encontrado
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    {expanded && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          id={`release-details-${r.id}`}
+                          className="px-0 pb-4"
+                        >
+                          {/* ADIÇÃO: largura mínima p/ conteúdo expandido dentro do scroller */}
+                          <div className="mt-2 mb-3 px-4 min-w-[720px] md:min-w-0">
+                            <div className="rounded-lg border border-gray-200 dark:border-zinc-700 p-4 bg-gray-50 dark:bg-zinc-800">
+                              <div className="space-y-6">
+                                <section>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-semibold">Resumo</h4>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => openReleaseEdit(r)}
+                                        className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                      >
+                                        Editar Release
+                                      </button>
+                                      <button
+                                        onClick={() => askDeleteRelease(r)}
+                                        className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                      >
+                                        Excluir Release
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <ul className="text-sm list-disc pl-5 space-y-1">
+                                    <li>Produto: {r.productName}</li>
+                                    <li>Categoria: {r.productCategory}</li>
+                                    <li>Status: {labelStatus(r.status)}</li>
+                                    <li>
+                                      Data de Cadastro: {fmtDate(r.createdAt)}
+                                    </li>
+                                  </ul>
+                                  <ul className="text-sm list-disc pl-5 space-y-1">
+                                    <li>
+                                      Versão anterior:{" "}
+                                      {r.previousVersion || "-"}
+                                    </li>
+                                    <li>
+                                      Atualização via OTA:{" "}
+                                      {r.ota ? "sim" : "não"}
+                                    </li>
+                                    {r.otaObs && (
+                                      <li>
+                                        Observação para atualização: {r.otaObs}
+                                      </li>
+                                    )}
+                                    <li>
+                                      Data da Release: {fmtDate(r.releaseDate)}
+                                    </li>
+                                    {r.importantNote && (
+                                      <li>Nota: {r.importantNote}</li>
+                                    )}
+                                  </ul>
+                                </section>
+
+                                <section>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-semibold">Módulos</h4>
+                                    <button
+                                      onClick={() => openModuleAdd(r)}
+                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                    >
+                                      Adicionar Módulo
+                                    </button>
+                                  </div>
+                                  {(mods.length ?? 0) === 0 ? (
+                                    <p className="text-sm text-gray-500">
+                                      Sem módulos
+                                    </p>
+                                  ) : (
+                                    <div
+                                      className="overflow-x-auto"
+                                      style={{
+                                        WebkitOverflowScrolling: "touch",
+                                      }}
+                                    >
+                                      <table className="w-full text-sm border border-gray-200 dark:border-zinc-700 rounded-md overflow-hidden min-w-[560px]">
+                                        <thead className="bg-gray-100 dark:bg-zinc-900">
+                                          <tr className="whitespace-nowrap">
+                                            <th className="px-3 py-2 text-left">
+                                              Módulo
+                                            </th>
+                                            <th className="px-3 py-2 text-left">
+                                              Versão
+                                            </th>
+                                            <th className="px-3 py-2 text-left">
+                                              Atualizado
+                                            </th>
+                                            <th className="px-3 py-2 text-right">
+                                              Ações
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {(mods ?? []).map((m) => (
+                                            <tr
+                                              key={m.id}
+                                              className="border-t border-gray-200 dark:border-zinc-700"
+                                            >
+                                              <td className="px-3 py-2">
+                                                {m.module}
+                                              </td>
+                                              <td className="px-3 py-2">
+                                                {m.version}
+                                              </td>
+                                              <td className="px-3 py-2">
+                                                {m.updated ? "sim" : "não"}
+                                              </td>
+                                              <td className="px-3 py-2 text-right space-x-2">
+                                                <button
+                                                  onClick={() =>
+                                                    openModuleEdit(r, m)
+                                                  }
+                                                  className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                                >
+                                                  Editar
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    askDeleteModule(r, m)
+                                                  }
+                                                  className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                                >
+                                                  Excluir
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </section>
+
+                                <section>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-semibold">Registros</h4>
+                                    <button
+                                      onClick={() => openEntryAdd(r)}
+                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                    >
+                                      Adicionar Registro
+                                    </button>
+                                  </div>
+                                  {(ents.length ?? 0) === 0 ? (
+                                    <p className="text-sm text-gray-500">
+                                      Sem registros
+                                    </p>
+                                  ) : (
+                                    <ul className="space-y-2 text-sm">
+                                      {(ents ?? []).map((e) => (
+                                        <li
+                                          key={e.id}
+                                          className="p-2 rounded-md border border-gray-200 dark:border-zinc-700"
+                                        >
+                                          <div className="flex justify-between mb-1">
+                                            <span className="font-medium">
+                                              #{e.itemOrder} •{" "}
+                                              {e.classification}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                              {e.category && (
+                                                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-zinc-700">
+                                                  {e.category}
+                                                </span>
+                                              )}
+                                              <button
+                                                onClick={() =>
+                                                  openEntryEdit(r, e)
+                                                }
+                                                className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                              >
+                                                Editar
+                                              </button>
+                                              <button
+                                                onClick={() =>
+                                                  askDeleteEntry(r, e)
+                                                }
+                                                className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                              >
+                                                Excluir
+                                              </button>
+                                            </div>
+                                          </div>
+                                          <p className="text-gray-700 dark:text-gray-300">
+                                            {e.observation}
+                                          </p>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </section>
+
+                                <section>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-semibold">Firmwares</h4>
+                                    <button
+                                      onClick={() => openLinkAdd(r)}
+                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                    >
+                                      Adicionar Firmware
+                                    </button>
+                                  </div>
+
+                                  {!r.links || r.links.length === 0 ? (
+                                    <p className="text-sm text-gray-500">
+                                      Sem firmwares
+                                    </p>
+                                  ) : (
+                                    <div
+                                      className="overflow-x-auto"
+                                      style={{
+                                        WebkitOverflowScrolling: "touch",
+                                      }}
+                                    >
+                                      <table className="w-full text-sm border border-gray-200 dark:border-zinc-700 rounded-md overflow-hidden min-w-[640px]">
+                                        <thead className="bg-gray-100 dark:bg-zinc-900">
+                                          <tr className="whitespace-nowrap">
+                                            <th className="px-3 py-2 text-left">
+                                              Módulo
+                                            </th>
+                                            <th className="px-3 py-2 text-left">
+                                              Descrição
+                                            </th>
+                                            <th className="px-3 py-2 text-left">
+                                              URL
+                                            </th>
+                                            <th className="px-3 py-2 text-right">
+                                              Ações
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {(r.links ?? []).map((l) => (
+                                            <tr
+                                              key={l.id}
+                                              className="border-t border-gray-200 dark:border-zinc-700"
+                                            >
+                                              <td className="px-3 py-2">
+                                                {l.module}
+                                              </td>
+                                              <td className="px-3 py-2">
+                                                {l.description}
+                                              </td>
+                                              <td className="px-3 py-2">
+                                                <a
+                                                  href={l.url}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="text-blue-600 hover:underline break-all"
+                                                >
+                                                  {l.url}
+                                                </a>
+                                              </td>
+                                              <td className="px-3 py-2 text-right space-x-2">
+                                                <button
+                                                  onClick={() =>
+                                                    openLinkEdit(r, l)
+                                                  }
+                                                  className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                                >
+                                                  Editar
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    askDeleteLink(r, l)
+                                                  }
+                                                  className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                                >
+                                                  Excluir
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </section>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+
+              {filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    <Inbox
+                      className="w-16 h-16 mx-auto mb-2 text-gray-400 dark:text-gray-500"
+                      strokeWidth={1}
+                    />
+                    Nenhum resultado encontrado
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Paginação */}
         {filtered.length > 0 && (
@@ -971,8 +976,8 @@ type EditModalProps = {
   saveRelease: () => Promise<void>;
   saveModule: () => Promise<void>;
   saveEntry: () => Promise<void>;
-  saveLink: () => Promise<void>; // <- NOVO
-  askDeleteLink: (r: Release, l: ReleaseLink) => void; // <- NOVO
+  saveLink: () => Promise<void>;
+  askDeleteLink: (r: Release, l: ReleaseLink) => void;
   askDeleteRelease: (r: Release) => void;
   askDeleteModule: (r: Release, m: ReleaseModule) => void;
   askDeleteEntry: (r: Release, e: ReleaseEntry) => void;
@@ -995,7 +1000,6 @@ const EditModal = memo(function EditModal({
   if (!modal.open) return null;
   const common =
     "w-full px-3 py-2 rounded-md border border-gray-300 text-sm bg-white dark:bg-white text-gray-900 dark:text-gray-900 placeholder:text-gray-500";
-
   const setField = (patch: Record<string, any>) =>
     setModal((prev) => ({
       ...(prev as any),
@@ -1034,6 +1038,9 @@ const EditModal = memo(function EditModal({
           </p>
         </div>
 
+        {/* ...todo resto inalterado... */}
+        {/* Mantive exatamente seu conteúdo abaixo, sem mexer em tamanhos */}
+        {/* RELEASE */}
         {modal.type === "release" && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -1127,6 +1134,7 @@ const EditModal = memo(function EditModal({
           </div>
         )}
 
+        {/* MODULE */}
         {modal.type === "module" && (
           <div className="space-y-3">
             <div>
@@ -1158,6 +1166,7 @@ const EditModal = memo(function EditModal({
           </div>
         )}
 
+        {/* ENTRY */}
         {modal.type === "entry" && (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-3">
@@ -1195,6 +1204,7 @@ const EditModal = memo(function EditModal({
           </div>
         )}
 
+        {/* LINK */}
         {modal.type === "link" && (
           <div className="space-y-3">
             <div>
@@ -1209,7 +1219,7 @@ const EditModal = memo(function EditModal({
               <label className="text-xs block mb-1">Descrição</label>
               <textarea
                 className={common}
-                rows={3} // ajuste se quiser
+                rows={3}
                 placeholder="Descreva o firmware"
                 value={(modal.data as any).description ?? ""}
                 onChange={(e) => setField({ description: e.target.value })}
