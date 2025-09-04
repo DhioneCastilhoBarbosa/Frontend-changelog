@@ -4,6 +4,13 @@ import { ChevronDown, Inbox } from "lucide-react";
 import api from "../../../services/api";
 import { toast } from "sonner";
 
+type ReleaseLink = {
+  id: number;
+  module: string;
+  description: string;
+  url: string;
+};
+
 type ReleaseModule = {
   id: number;
   module: string;
@@ -30,19 +37,25 @@ type Release = {
   status: "revisao" | "producao" | "descontinuado" | string;
   modules: ReleaseModule[] | undefined | null;
   entries: ReleaseEntry[] | undefined | null;
+  links: ReleaseLink[] | undefined | null; // <- NOVO
   createdAt: string;
   updatedAt: string;
 };
 
 type ModalMode = "add" | "edit";
-type ModalType = "release" | "module" | "entry";
+type ModalType = "release" | "module" | "entry" | "link";
+
 type ModalState =
   | {
       open: true;
       type: ModalType;
       mode: ModalMode;
       release: Release;
-      data: Partial<Release> | Partial<ReleaseModule> | Partial<ReleaseEntry>;
+      data:
+        | Partial<Release>
+        | Partial<ReleaseModule>
+        | Partial<ReleaseEntry>
+        | Partial<ReleaseLink>;
     }
   | { open: false };
 
@@ -74,6 +87,7 @@ export default function ReleaseTable() {
     ...r,
     modules: Array.isArray(r.modules) ? r.modules : [],
     entries: Array.isArray(r.entries) ? r.entries : [],
+    links: Array.isArray((r as any).links) ? (r as any).links : [],
   });
 
   const getData = useCallback(async () => {
@@ -110,18 +124,51 @@ export default function ReleaseTable() {
     });
 
   const statusPill = (status: Release["status"]) => {
+    const s = String(status ?? "").toLowerCase();
     const base =
       "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium";
-    if (status === "producao")
+    if (s === "producao")
       return `${base} bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300`;
-    if (status === "revisao")
+    if (s === "revisao")
       return `${base} bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300`;
-    if (status === "descontinuado")
+    if (s === "descontinuado")
       return `${base} bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300`;
     return `${base} bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-gray-300`;
   };
 
+  // Novo helper para rótulo exibido
+  const labelStatus = (status: Release["status"]) => {
+    const s = String(status ?? "").toLowerCase();
+    if (s === "producao") return "Produção";
+    if (s === "revisao") return "Revisão";
+    if (s === "descontinuado") return "Descontinuado";
+    return String(status ?? "");
+  };
+
   // Openers
+  const openLinkAdd = (r: Release) =>
+    setModal({
+      open: true,
+      type: "link",
+      mode: "add",
+      release: normalize(r),
+      data: { module: "", description: "", url: "" },
+    });
+
+  const openLinkEdit = (r: Release, l: ReleaseLink) =>
+    setModal({
+      open: true,
+      type: "link",
+      mode: "edit",
+      release: normalize(r),
+      data: {
+        id: l.id,
+        module: l.module,
+        description: l.description,
+        url: l.url,
+      },
+    });
+
   const openReleaseEdit = (r: Release) =>
     setModal({
       open: true,
@@ -234,6 +281,12 @@ export default function ReleaseTable() {
         classification: e.classification,
         observation: e.observation,
       })),
+      // <- NOVO
+      links: (base.links || []).map((l) => ({
+        module: l.module,
+        description: l.description,
+        url: l.url,
+      })),
     };
 
     return sanitize(payload);
@@ -257,6 +310,28 @@ export default function ReleaseTable() {
       setConfirm({ open: false } as any);
     }
   }
+  // helper opcional, lida com id ausente/0
+  function sameLink(a: ReleaseLink, b: Partial<ReleaseLink>) {
+    if (a.id && b.id) return a.id === b.id;
+    return (
+      a.module === b.module &&
+      a.description === b.description &&
+      a.url === b.url
+    );
+  }
+
+  const askDeleteLink = (r: Release, l: ReleaseLink) =>
+    confirmDelete(
+      "Excluir Firmware",
+      `Confirma excluir o link "${l.description}" da release #${r.id}?`,
+      async () => {
+        await putReleaseWith(r.id, (fresh) => {
+          const links = (fresh.links ?? []).filter((x) => !sameLink(x, l));
+          return { ...fresh, links };
+        });
+      }
+    );
+
   const askDeleteRelease = (r: Release) =>
     confirmDelete(
       "Excluir Release",
@@ -265,20 +340,30 @@ export default function ReleaseTable() {
         await api.delete(`/releases/${r.id}`);
       }
     );
+
   const askDeleteModule = (r: Release, m: ReleaseModule) =>
     confirmDelete(
       "Excluir Módulo",
       `Confirma excluir o módulo "${m.module}" da release #${r.id}?`,
       async () => {
-        await api.delete(`/modules/${m.id}`);
+        await putReleaseWith(r.id, (fresh) => {
+          const mods = (fresh.modules ?? []).filter((x) => x.id !== m.id);
+          return { ...fresh, modules: mods };
+        });
       }
     );
+
   const askDeleteEntry = (r: Release, e: ReleaseEntry) =>
     confirmDelete(
       "Excluir Registro",
       `Confirma excluir o registro #${e.itemOrder} da release #${r.id}?`,
       async () => {
-        await api.delete(`/entries/${e.id}`);
+        await putReleaseWith(r.id, (fresh) => {
+          const ents = (fresh.entries ?? []).filter((x) => x.id !== e.id);
+          // reordena itemOrder para manter sequência 1..n (opcional)
+          const reindexed = ents.map((x, i) => ({ ...x, itemOrder: i + 1 }));
+          return { ...fresh, entries: reindexed };
+        });
       }
     );
 
@@ -291,6 +376,58 @@ export default function ReleaseTable() {
     const next = transform(fresh);
     const payload = buildReleaseUpdatePayload(next, {} as Partial<Release>);
     await api.put(`/releases/${releaseId}`, payload);
+  }
+
+  async function saveLink() {
+    if (!modal.open || modal.type !== "link") return;
+    setSaving(true);
+    try {
+      const rId = modal.release.id;
+      const d = modal.data as Partial<ReleaseLink>;
+
+      const isUrl = (u?: string) => !!u && /^https?:\/\/\S+/i.test(u);
+      if (
+        modal.mode === "add" &&
+        (!d.module || !d.description || !isUrl(d.url))
+      ) {
+        toast.error(
+          "Preencha Módulo, Descrição e uma URL válida (http/https)."
+        );
+        setSaving(false);
+        return;
+      }
+
+      await putReleaseWith(rId, (fresh) => {
+        const links = [...(fresh.links ?? [])];
+
+        if (modal.mode === "add") {
+          links.push({
+            id: 0 as any,
+            module: d.module ?? "",
+            description: d.description ?? "",
+            url: d.url ?? "",
+          });
+        } else {
+          for (let i = 0; i < links.length; i++) {
+            if (links[i].id === d.id) {
+              links[i] = {
+                ...links[i],
+                module: d.module ?? links[i].module,
+                description: d.description ?? links[i].description,
+                url: d.url ?? links[i].url,
+              };
+              break;
+            }
+          }
+        }
+        return { ...fresh, links };
+      });
+
+      await getData();
+      closeModal();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function saveRelease() {
@@ -460,7 +597,9 @@ export default function ReleaseTable() {
                     <td className="px-4 py-3">{r.productName}</td>
                     <td className="px-4 py-3">{fmtDate(r.createdAt)}</td>
                     <td className="px-4 py-3">
-                      <span className={statusPill(r.status)}>{r.status}</span>
+                      <span className={statusPill(r.status)}>
+                        {labelStatus(r.status)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -512,7 +651,7 @@ export default function ReleaseTable() {
                                 <ul className="text-sm list-disc pl-5 space-y-1">
                                   <li>Produto: {r.productName}</li>
                                   <li>Categoria: {r.productCategory}</li>
-                                  <li>Status: {r.status}</li>
+                                  <li>Status: {labelStatus(r.status)}</li>
                                   <li>
                                     Data de Cadastro: {fmtDate(r.createdAt)}
                                   </li>
@@ -668,6 +807,85 @@ export default function ReleaseTable() {
                                   </ul>
                                 )}
                               </section>
+
+                              {/* FIRMWARES (links) */}
+                              <section>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-semibold">Firmwares</h4>
+                                  <button
+                                    onClick={() => openLinkAdd(r)}
+                                    className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                  >
+                                    Adicionar Firmware
+                                  </button>
+                                </div>
+
+                                {!r.links || r.links.length === 0 ? (
+                                  <p className="text-sm text-gray-500">
+                                    Sem firmwares
+                                  </p>
+                                ) : (
+                                  <table className="w-full text-sm border border-gray-200 dark:border-zinc-700 rounded-md overflow-hidden">
+                                    <thead className="bg-gray-100 dark:bg-zinc-900">
+                                      <tr>
+                                        <th className="px-3 py-2 text-left">
+                                          Módulo
+                                        </th>
+                                        <th className="px-3 py-2 text-left">
+                                          Descrição
+                                        </th>
+                                        <th className="px-3 py-2 text-left">
+                                          URL
+                                        </th>
+                                        <th className="px-3 py-2 text-right">
+                                          Ações
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {(r.links ?? []).map((l) => (
+                                        <tr
+                                          key={l.id}
+                                          className="border-t border-gray-200 dark:border-zinc-700"
+                                        >
+                                          <td className="px-3 py-2">
+                                            {l.module}
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            {l.description}
+                                          </td>
+                                          <td className="px-3 py-2">
+                                            <a
+                                              href={l.url}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="text-blue-600 hover:underline break-all"
+                                            >
+                                              {l.url}
+                                            </a>
+                                          </td>
+                                          <td className="px-3 py-2 text-right space-x-2">
+                                            <button
+                                              onClick={() => openLinkEdit(r, l)}
+                                              className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                            >
+                                              Editar
+                                            </button>
+                                            <button
+                                              onClick={() =>
+                                                askDeleteLink(r, l)
+                                              }
+                                              className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                            >
+                                              Excluir
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </section>
                             </div>
                           </div>
                         </div>
@@ -728,6 +946,8 @@ export default function ReleaseTable() {
         saveRelease={saveRelease}
         saveModule={saveModule}
         saveEntry={saveEntry}
+        saveLink={saveLink}
+        askDeleteLink={askDeleteLink}
         askDeleteRelease={askDeleteRelease}
         askDeleteModule={askDeleteModule}
         askDeleteEntry={askDeleteEntry}
@@ -751,6 +971,8 @@ type EditModalProps = {
   saveRelease: () => Promise<void>;
   saveModule: () => Promise<void>;
   saveEntry: () => Promise<void>;
+  saveLink: () => Promise<void>; // <- NOVO
+  askDeleteLink: (r: Release, l: ReleaseLink) => void; // <- NOVO
   askDeleteRelease: (r: Release) => void;
   askDeleteModule: (r: Release, m: ReleaseModule) => void;
   askDeleteEntry: (r: Release, e: ReleaseEntry) => void;
@@ -764,9 +986,11 @@ const EditModal = memo(function EditModal({
   saveRelease,
   saveModule,
   saveEntry,
+  saveLink,
   askDeleteRelease,
   askDeleteModule,
   askDeleteEntry,
+  askDeleteLink,
 }: EditModalProps) {
   if (!modal.open) return null;
   const common =
@@ -800,6 +1024,10 @@ const EditModal = memo(function EditModal({
               (modal.mode === "edit"
                 ? "Editar Registro"
                 : "Adicionar Registro")}
+            {modal.type === "link" &&
+              (modal.mode === "edit"
+                ? "Editar Firmware"
+                : "Adicionar Firmware")}{" "}
           </h3>
           <p className="text-xs text-gray-500">
             ID Release: {modal.release.id}
@@ -967,6 +1195,38 @@ const EditModal = memo(function EditModal({
           </div>
         )}
 
+        {modal.type === "link" && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs block mb-1">Módulo</label>
+              <input
+                className={common}
+                value={(modal.data as any).module ?? ""}
+                onChange={(e) => setField({ module: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs block mb-1">Descrição</label>
+              <textarea
+                className={common}
+                rows={3} // ajuste se quiser
+                placeholder="Descreva o firmware"
+                value={(modal.data as any).description ?? ""}
+                onChange={(e) => setField({ description: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs block mb-1">URL</label>
+              <input
+                className={common}
+                value={(modal.data as any).url ?? ""}
+                onChange={(e) => setField({ url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+        )}
+
         <div className="mt-5 flex justify-between gap-2">
           {modal.mode === "edit" && (
             <button
@@ -983,6 +1243,11 @@ const EditModal = memo(function EditModal({
                     modal.release,
                     modal.data as ReleaseEntry
                   );
+                if (modal.type === "link")
+                  return askDeleteLink(
+                    modal.release,
+                    modal.data as ReleaseLink
+                  );
               }}
               className="px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-sm"
               disabled={saving}
@@ -993,7 +1258,7 @@ const EditModal = memo(function EditModal({
           <div className="ml-auto flex gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-2 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-sm"
+              className="px-3 py-2 rounded-md border dark:border-zinc-700 hover:bg-gray-100 text-sm"
               disabled={saving}
             >
               Cancelar
@@ -1003,6 +1268,7 @@ const EditModal = memo(function EditModal({
                 if (modal.type === "release") return saveRelease();
                 if (modal.type === "module") return saveModule();
                 if (modal.type === "entry") return saveEntry();
+                if (modal.type === "link") return saveLink();
               }}
               disabled={saving}
               className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 text-sm"
@@ -1062,7 +1328,7 @@ const ConfirmModal = memo(function ConfirmModal({
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={() => setConfirm({ open: false })}
-            className="px-3 py-2 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-sm"
+            className="px-3 py-2 rounded-md border dark:border-zinc-700 hover:bg-gray-100  text-sm"
             disabled={confirm.busy}
           >
             Cancelar

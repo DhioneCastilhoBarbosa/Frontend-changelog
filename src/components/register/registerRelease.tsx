@@ -9,6 +9,8 @@ type EntryInput = {
   classification: string;
   observation: string;
 };
+
+type ReleaseLinkInput = { module: string; description: string; url: string };
 type Status = "revisao" | "producao" | "descontinuado";
 
 type NewReleaseInput = {
@@ -23,6 +25,7 @@ type NewReleaseInput = {
   status: Status;
   modules: ModuleInput[];
   entries: EntryInput[];
+  links: ReleaseLinkInput[]; // <- NOVO
 };
 
 function toApiDate(v?: string) {
@@ -56,6 +59,16 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
       ...v,
       modules: [...v.modules, { module: "", version: "", updated: false }],
     }));
+
+  const addLink = () =>
+    setValue((v) => ({
+      ...v,
+      links: [...v.links, { module: "", description: "", url: "" }],
+    }));
+
+  const removeLink = (idx: number) =>
+    setValue((v) => ({ ...v, links: v.links.filter((_, i) => i !== idx) }));
+
   const removeModule = (idx: number) =>
     setValue((v) => ({ ...v, modules: v.modules.filter((_, i) => i !== idx) }));
 
@@ -219,7 +232,10 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
             </thead>
             <tbody>
               {value.modules.map((m, idx) => (
-                <tr key={idx} className="border-t">
+                <tr
+                  key={idx}
+                  className="border-t border-gray-200 dark:border-zinc-700"
+                >
                   <td className="px-3 py-2">
                     <input
                       className={commonInput}
@@ -304,7 +320,7 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
             {value.entries.map((e, idx) => (
               <li
                 key={idx}
-                className="p-2 rounded-md border border-gray-200 space-y-2"
+                className="p-2 rounded-md border border-gray-300 dark:border-zinc-700 space-y-2"
               >
                 <div className="grid grid-cols-4 gap-3">
                   <div>
@@ -336,7 +352,7 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
                           return { ...v, entries };
                         });
                       }}
-                      placeholder=""
+                      placeholder="NOVO"
                     />
                   </div>
                 </div>
@@ -361,6 +377,98 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
                   <button
                     type="button"
                     onClick={() => removeEntry(idx)}
+                    className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      {/* Firmwares */}
+
+      <section className="mt-10">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold">Firmwares</h4>
+          <button
+            type="button"
+            onClick={addLink}
+            className="px-2 py-1 rounded-md border border-gray-300 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+          >
+            Adicionar Firmware
+          </button>
+        </div>
+
+        {value.links.length === 0 ? (
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Sem firmwares
+          </p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {value.links.map((l, idx) => (
+              <li
+                key={idx}
+                className="p-2 rounded-md border border-gray-200 dark:border-zinc-700 space-y-2"
+              >
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs block mb-1">Módulo</label>
+                    <input
+                      className={commonInput}
+                      value={l.module}
+                      onChange={(e) => {
+                        const module = e.target.value;
+                        setValue((v) => {
+                          const links = [...v.links];
+                          links[idx] = { ...links[idx], module };
+                          return { ...v, links };
+                        });
+                      }}
+                      placeholder="MainBoard"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs block mb-1">URL</label>
+                    <input
+                      className={commonInput}
+                      value={l.url}
+                      onChange={(e) => {
+                        const url = e.target.value;
+                        setValue((v) => {
+                          const links = [...v.links];
+                          links[idx] = { ...links[idx], url };
+                          return { ...v, links };
+                        });
+                      }}
+                      placeholder="https://cdn.exemplo.com/fw/mainboard-1.8.0.bin"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs block mb-1">Descrição</label>
+                  <textarea
+                    className={commonInput}
+                    rows={3}
+                    value={l.description}
+                    onChange={(e) => {
+                      const description = e.target.value;
+                      setValue((v) => {
+                        const links = [...v.links];
+                        links[idx] = { ...links[idx], description };
+                        return { ...v, links };
+                      });
+                    }}
+                    placeholder="Descrição"
+                  />
+                </div>
+
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => removeLink(idx)}
                     className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
                   >
                     Remover
@@ -409,6 +517,7 @@ export default function CreateReleasePage() {
     status: "producao",
     modules: [{ module: "", version: "", updated: false }],
     entries: [{ itemOrder: 1, classification: "", observation: "" }],
+    links: [{ module: "", description: "", url: "" }], // <- NOVO
   });
 
   // Ajuste este caminho para onde você quer voltar após salvar/cancelar:
@@ -419,6 +528,17 @@ export default function CreateReleasePage() {
   const handleSubmit = async () => {
     setSaving(true);
     try {
+      const isUrl = (u: string) => /^https?:\/\/\S+/i.test(u);
+
+      for (const l of form.links) {
+        if (!l.module.trim() || !l.description.trim() || !isUrl(l.url.trim())) {
+          toast.error(
+            "Preencha módulo, descrição e uma URL válida para cada firmware."
+          );
+          setSaving(false);
+          return; // sai da função, não envia
+        }
+      }
       const payload = {
         version: form.version.trim(),
         previousVersion: form.previousVersion.trim(),
@@ -439,6 +559,11 @@ export default function CreateReleasePage() {
           classification: e.classification.trim(),
           observation: e.observation.trim(),
         })),
+        links: form.links.map((l) => ({
+          module: l.module.trim(),
+          description: l.description.trim(),
+          url: l.url.trim(),
+        })), // <- NOVO
       };
       await api.post("/releases", payload);
       toast.success("Release criada com sucesso.");
