@@ -44,6 +44,7 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
   saving,
   onCancel,
   onSubmit,
+  fwFile,
   setFwFile,
   fwDirName,
   setFwDirName,
@@ -59,6 +60,7 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
   saving: boolean;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
+  fwFile: File | null;
   setFwFile: (f: File | null) => void;
   fwDirName: string;
   setFwDirName: (s: string) => void;
@@ -457,19 +459,38 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
               </div>
               <div>
                 <label className="text-xs block mb-1">Arquivo</label>
-                <input
-                  type="file"
-                  className={commonInput}
-                  onChange={(e) => setFwFile(e.target.files?.[0] || null)}
-                />
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="fw-file"
+                    className="cursor-pointer px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+                  >
+                    Selecionar arquivo
+                  </label>
+                  <input
+                    id="fw-file"
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => setFwFile(e.target.files?.[0] || null)}
+                  />
+                  {fwFile ? (
+                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[200px]">
+                      {fwFile.name}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-500 dark:text-gray-400 italic">
+                      Nenhum arquivo selecionado
+                    </span>
+                  )}
+                </div>
               </div>
+
               <div>
-                <label className="text-xs block mb-1">Módulo do link</label>
+                <label className="text-xs block mb-1">Módulo</label>
                 <input
                   className={commonInput + " placeholder:text-gray-400"}
                   value={fwModule}
                   onChange={(e) => setFwModule(e.target.value)}
-                  placeholder="main"
+                  placeholder="MainBoard"
                 />
               </div>
             </div>
@@ -785,6 +806,7 @@ export default function CreateReleasePage() {
         saving={saving}
         onCancel={goToList}
         onSubmit={handleSubmit}
+        fwFile={fwFile}
         setFwFile={setFwFile}
         fwDirName={fwDirName}
         setFwDirName={setFwDirName}
