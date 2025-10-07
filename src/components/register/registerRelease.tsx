@@ -44,12 +44,30 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
   saving,
   onCancel,
   onSubmit,
+  setFwFile,
+  fwDirName,
+  setFwDirName,
+  fwModule,
+  setFwModule,
+  fwDesc,
+  setFwDesc,
+  fwMode,
+  setFwMode,
 }: {
   value: NewReleaseInput;
   setValue: React.Dispatch<React.SetStateAction<NewReleaseInput>>;
   saving: boolean;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
+  setFwFile: (f: File | null) => void;
+  fwDirName: string;
+  setFwDirName: (s: string) => void;
+  fwModule: string;
+  setFwModule: (s: string) => void;
+  fwDesc: string;
+  setFwDesc: (s: string) => void;
+  fwMode: "upload" | "link";
+  setFwMode: (m: "upload" | "link") => void;
 }) {
   const setField = (patch: Partial<NewReleaseInput>) =>
     setValue((v) => ({ ...v, ...patch }));
@@ -387,98 +405,185 @@ const CreateReleaseForm = memo(function CreateReleaseForm({
           </ul>
         )}
       </section>
-      {/* Firmwares */}
 
+      {/* Origem do firmware */}
       <section className="mt-10">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold">Firmwares</h4>
-          <button
-            type="button"
-            onClick={addLink}
-            className="px-2 py-1 rounded-md border border-gray-300 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-          >
-            Adicionar Firmware
-          </button>
+        <h4 className="font-semibold mb-2">Origem do firmware</h4>
+        <div className="flex gap-4 text-sm">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="radio"
+              name="fwMode"
+              checked={fwMode === "upload"}
+              onChange={() => setFwMode("upload")}
+            />
+            Upload de arquivo
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="radio"
+              name="fwMode"
+              checked={fwMode === "link"}
+              onChange={() => setFwMode("link")}
+            />
+            Já tenho o link do arquivo
+          </label>
         </div>
+      </section>
 
-        {value.links.length === 0 ? (
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Sem firmwares
-          </p>
-        ) : (
-          <ul className="space-y-2 text-sm">
-            {value.links.map((l, idx) => (
-              <li
-                key={idx}
-                className="p-2 rounded-md border border-gray-200 dark:border-zinc-700 space-y-2"
-              >
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="col-span-2">
-                    <label className="text-xs block mb-1">Módulo</label>
-                    <input
-                      className={commonInput}
-                      value={l.module}
-                      onChange={(e) => {
-                        const module = e.target.value;
-                        setValue((v) => {
-                          const links = [...v.links];
-                          links[idx] = { ...links[idx], module };
-                          return { ...v, links };
-                        });
-                      }}
-                      placeholder="MainBoard"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs block mb-1">URL</label>
-                    <input
-                      className={commonInput}
-                      value={l.url}
-                      onChange={(e) => {
-                        const url = e.target.value;
-                        setValue((v) => {
-                          const links = [...v.links];
-                          links[idx] = { ...links[idx], url };
-                          return { ...v, links };
-                        });
-                      }}
-                      placeholder="https://cdn.exemplo.com/fw/mainboard-1.8.0.bin"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs block mb-1">Descrição</label>
-                  <textarea
-                    className={commonInput}
-                    rows={3}
-                    value={l.description}
-                    onChange={(e) => {
-                      const description = e.target.value;
-                      setValue((v) => {
-                        const links = [...v.links];
-                        links[idx] = { ...links[idx], description };
-                        return { ...v, links };
-                      });
-                    }}
-                    placeholder="Descrição"
+      {/* Upload de Firmware (WebDAV) */}
+      {fwMode === "upload" &&
+        (value.productCategory === "AC" || value.productCategory === "DC") && (
+          <section className="mt-6">
+            <h4 className="font-semibold mb-2">Upload de Firmware</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs block mb-1">Diretório</label>
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm px-2 py-2 rounded-md bg-gray-100 dark:bg-zinc-800">
+                    {value.productCategory}/
+                  </span>
+                  <input
+                    className={commonInput + " flex-1"}
+                    value={fwDirName}
+                    onChange={(e) => setFwDirName(e.target.value)}
+                    placeholder="city7kw"
                   />
                 </div>
-
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => removeLink(idx)}
-                    className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
-                  >
-                    Remover
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Resultado: /firmware/{value.productCategory}/
+                  {fwDirName || "<nome_do_produto>"}/nome_do_arquivo
+                </p>
+              </div>
+              <div>
+                <label className="text-xs block mb-1">Arquivo</label>
+                <input
+                  type="file"
+                  className={commonInput}
+                  onChange={(e) => setFwFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div>
+                <label className="text-xs block mb-1">Módulo do link</label>
+                <input
+                  className={commonInput + " placeholder:text-gray-400"}
+                  value={fwModule}
+                  onChange={(e) => setFwModule(e.target.value)}
+                  placeholder="main"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs block mb-1 mt-3">
+                Descrição do link
+              </label>
+              <textarea
+                className={commonInput}
+                rows={3}
+                value={fwDesc}
+                onChange={(e) => {
+                  const description = e.target.value;
+                  setFwDesc(description);
+                }}
+                placeholder="Descrição"
+              />
+            </div>
+          </section>
         )}
-      </section>
+
+      {/* Firmwares */}
+      {fwMode === "link" && (
+        <section className="mt-10">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold">Firmwares - servidores externos</h4>
+            <button
+              type="button"
+              onClick={addLink}
+              className="px-2 py-1 rounded-md border border-gray-300 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+            >
+              Adicionar Firmware
+            </button>
+          </div>
+
+          {value.links.length === 0 ? (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Sem firmwares
+            </p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {value.links.map((l, idx) => (
+                <li
+                  key={idx}
+                  className="p-2 rounded-md border border-gray-200 dark:border-zinc-700 space-y-2"
+                >
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="col-span-2">
+                      <label className="text-xs block mb-1">Módulo</label>
+                      <input
+                        className={commonInput}
+                        value={l.module}
+                        onChange={(e) => {
+                          const module = e.target.value;
+                          setValue((v) => {
+                            const links = [...v.links];
+                            links[idx] = { ...links[idx], module };
+                            return { ...v, links };
+                          });
+                        }}
+                        placeholder="MainBoard"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs block mb-1">URL</label>
+                      <input
+                        className={commonInput}
+                        value={l.url}
+                        onChange={(e) => {
+                          const url = e.target.value;
+                          setValue((v) => {
+                            const links = [...v.links];
+                            links[idx] = { ...links[idx], url };
+                            return { ...v, links };
+                          });
+                        }}
+                        placeholder="https://cdn.exemplo.com/fw/mainboard-1.8.0.bin"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs block mb-1">Descrição</label>
+                    <textarea
+                      className={commonInput}
+                      rows={3}
+                      value={l.description}
+                      onChange={(e) => {
+                        const description = e.target.value;
+                        setValue((v) => {
+                          const links = [...v.links];
+                          links[idx] = { ...links[idx], description };
+                          return { ...v, links };
+                        });
+                      }}
+                      placeholder="Descrição"
+                    />
+                  </div>
+
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => removeLink(idx)}
+                      className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Ações */}
       <div className="mt-6 flex justify-end gap-2">
@@ -520,6 +625,15 @@ export default function CreateReleasePage() {
     links: [{ module: "", description: "", url: "" }], // <- NOVO
   });
 
+  // upload de firmware (opcional)
+  const [fwFile, setFwFile] = useState<File | null>(null);
+  const [fwDirName, setFwDirName] = useState(""); // ex.: "city7kw"
+  const [fwModule, setFwModule] = useState("");
+  const [fwDesc, setFwDesc] = useState("");
+  // novo: seletor de modo
+  type FwMode = "upload" | "link";
+  const [fwMode, setFwMode] = useState<FwMode>("upload");
+
   // Ajuste este caminho para onde você quer voltar após salvar/cancelar:
   const RETURN_TO = "/dashboard";
 
@@ -530,15 +644,18 @@ export default function CreateReleasePage() {
     try {
       const isUrl = (u: string) => /^https?:\/\/\S+/i.test(u);
 
+      // valida links manuais: só valida se URL preenchida
       for (const l of form.links) {
-        if (!l.module.trim() || !l.description.trim() || !isUrl(l.url.trim())) {
+        const filled = l.module.trim() || l.description.trim() || l.url.trim();
+        if (filled && !isUrl(l.url.trim())) {
           toast.error(
-            "Preencha módulo, descrição e uma URL válida para cada firmware."
+            "Informe uma URL válida para cada firmware com link preenchido."
           );
           setSaving(false);
-          return; // sai da função, não envia
+          return;
         }
       }
+
       const payload = {
         version: form.version.trim(),
         previousVersion: form.previousVersion.trim(),
@@ -559,45 +676,102 @@ export default function CreateReleasePage() {
           classification: e.classification.trim(),
           observation: e.observation.trim(),
         })),
-        links: form.links.map((l) => ({
-          module: l.module.trim(),
-          description: l.description.trim(),
-          url: l.url.trim(),
-        })), // <- NOVO
+        links: form.links
+          .filter((l) => l.url.trim()) // só envia links manuais válidos
+          .map((l) => ({
+            module: l.module.trim(),
+            description: l.description.trim(),
+            url: l.url.trim(),
+          })),
       };
-      await api.post("/releases", payload);
-      toast.success("Release criada com sucesso.");
-      goToList(); // não usa navigate(-1)
-    } catch (err: unknown) {
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "response" in err &&
-        typeof (err as { response?: unknown }).response === "object"
-      ) {
-        const response = (
-          err as { response?: { status?: number; data?: unknown } }
-        ).response;
-        console.error(
-          "POST /releases error:",
-          response?.status,
-          response?.data
-        );
-        toast.error(
-          typeof response?.data === "object" &&
-            response?.data !== null &&
-            "message" in response.data
-            ? (response.data as { message?: string }).message
-            : "Falha ao salvar release. Seu usuário pode não ter permissão para esta ação."
+
+      const willUpload =
+        fwMode === "upload" &&
+        fwFile &&
+        (form.productCategory === "AC" || form.productCategory === "DC") &&
+        fwDirName.trim();
+
+      if (fwMode === "link") {
+        if (payload.links.length === 0) {
+          toast.error("Informe ao menos um link de firmware.");
+          setSaving(false);
+          return;
+        }
+        // todos os campos obrigatórios para cada link
+        for (const l of payload.links) {
+          if (!l.module || !l.description || !/^https?:\/\/\S+/i.test(l.url)) {
+            toast.error(
+              "Preencha Módulo, Descrição e uma URL válida em cada link."
+            );
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
+      if (fwMode === "upload" && !willUpload) {
+        toast.error("Selecione o arquivo e o diretório para upload.");
+        setSaving(false);
+        return;
+      }
+
+      if (willUpload) {
+        // multipart → servidor de arquivos via davPut no backend
+        const fd = new FormData();
+        fd.append("data", JSON.stringify(payload));
+        fd.append("dir", `${form.productCategory}/${fwDirName.trim()}`);
+        fd.append("file", fwFile as File);
+        fd.append("linkModule", fwModule.trim() || "default");
+        fd.append("linkDescription", fwDesc.trim() || "Firmware");
+
+        await api.post(
+          "https://api-changelog.intelbras-cve-pro.com.br/api/releases",
+          fd,
+          { headers: { "Content-Type": "multipart/form-data" } }
         );
       } else {
-        console.error("POST /releases error:", err);
-        toast.error(
-          "Falha ao salvar release. Seu usuário pode não ter permissão para esta ação."
+        // JSON puro → sem upload; só links manuais
+        await api.post(
+          "https://api-changelog.intelbras-cve-pro.com.br/api/releases",
+          payload
         );
       }
-      // Se seu axios tiver interceptor que desloga em 401, isso ainda pode ocorrer.
-      // Caso não queira redirecionar no 401 aqui, remova lógica de logout automática no interceptor.
+
+      toast.success("Release criada com sucesso.");
+      setForm({
+        version: "",
+        previousVersion: "",
+        ota: true,
+        otaObs: "",
+        releaseDate: "",
+        importantNote: "",
+        productCategory: "",
+        productName: "",
+        status: "producao",
+        modules: [{ module: "", version: "", updated: false }],
+        entries: [{ itemOrder: 1, classification: "", observation: "" }],
+        links: [{ module: "", description: "", url: "" }],
+      });
+
+      // 🔄 Limpar dados temporários de firmware
+      setFwFile(null);
+      setFwDirName("");
+      setFwModule("main");
+      setFwDesc("Firmware");
+
+      // 🔄 (opcional) Resetar modo se tiver seletor de upload/link
+      setFwMode("upload");
+      goToList();
+    } catch (err: any) {
+      console.error(
+        "POST /releases error:",
+        err?.response?.status,
+        err?.response?.data
+      );
+      toast.error(
+        err?.response?.data?.message ||
+          "Falha ao salvar release. Verifique os campos e permissões."
+      );
     } finally {
       setSaving(false);
     }
@@ -611,6 +785,15 @@ export default function CreateReleasePage() {
         saving={saving}
         onCancel={goToList}
         onSubmit={handleSubmit}
+        setFwFile={setFwFile}
+        fwDirName={fwDirName}
+        setFwDirName={setFwDirName}
+        fwModule={fwModule}
+        setFwModule={setFwModule}
+        fwDesc={fwDesc}
+        setFwDesc={setFwDesc}
+        fwMode={fwMode}
+        setFwMode={setFwMode}
       />
     </div>
   );
