@@ -21,8 +21,8 @@ export default function SignIn({ onLogin }: SignInProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const resposta = await api.post("/auth/login", { email, password });
-      const { token } = resposta.data;
+      const { data } = await api.post("/auth/login", { email, password });
+      const { token } = data;
 
       localStorage.setItem("token", token);
       localStorage.setItem("authenticated", "true");
@@ -32,7 +32,7 @@ export default function SignIn({ onLogin }: SignInProps) {
 
       onLogin();
       navigate("/dashboard");
-    } catch (erro: unknown) {
+    } catch (erro) {
       console.error("Erro ao fazer login", erro);
       toast.error(
         "Erro ao fazer login. Verifique suas credenciais e tente novamente."

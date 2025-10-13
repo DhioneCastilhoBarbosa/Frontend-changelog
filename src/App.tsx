@@ -26,14 +26,12 @@ export default function App() {
     const token = localStorage.getItem("token");
     let expMs = Number(localStorage.getItem("expires_at")) || 0;
 
-    // Se não houver expires_at, derive do token
     if (token && !expMs) {
       expMs = parseJwtExpMs(token);
       if (expMs) localStorage.setItem("expires_at", String(expMs));
     }
 
-    const now = Date.now();
-    if (token && expMs && now < expMs) {
+    if (token && expMs && Date.now() < expMs) {
       setIsAuthenticated(true);
     } else {
       localStorage.removeItem("authenticated");
@@ -41,7 +39,6 @@ export default function App() {
       localStorage.removeItem("token");
       setIsAuthenticated(false);
     }
-
     setIsLoading(false);
   }, []);
 

@@ -1,7 +1,7 @@
 // services/api.ts
 import axios from "axios";
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: "https://api-changelog.intelbras-cve-pro.com.br/api",
   withCredentials: true,
 });
 
@@ -26,7 +26,7 @@ api.interceptors.response.use(
       try {
         refreshing = true;
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL}/auth/refresh`,
+          `https://api-changelog.intelbras-cve-pro.com.br/api/auth/refresh`,
           {},
           { withCredentials: true }
         );
