@@ -14,6 +14,8 @@ import RequestKey from "./components/requestKey";
 import PrivateRoute from "./routes/PrivateRoute";
 import CreateReleaseModal from "./components/register/registerRelease";
 
+import { parseJwtExpMs } from "./utils/jwt";
+
 export default function App() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,27 +23,31 @@ export default function App() {
   const [isPage, setIspage] = useState("dashboard");
 
   useEffect(() => {
-    const authenticated = localStorage.getItem("authenticated");
-    const expires = localStorage.getItem("expires_at");
-    const now = Date.now();
-    const expiration = expires ? parseInt(expires, 10) : 0;
+    const token = localStorage.getItem("token");
+    let expMs = Number(localStorage.getItem("expires_at")) || 0;
 
-    if (authenticated === "true" && expiration > now) {
+    // Se não houver expires_at, derive do token
+    if (token && !expMs) {
+      expMs = parseJwtExpMs(token);
+      if (expMs) localStorage.setItem("expires_at", String(expMs));
+    }
+
+    const now = Date.now();
+    if (token && expMs && now < expMs) {
       setIsAuthenticated(true);
     } else {
       localStorage.removeItem("authenticated");
       localStorage.removeItem("expires_at");
-      localStorage.removeItem("token"); // importante também
+      localStorage.removeItem("token");
+      setIsAuthenticated(false);
     }
 
-    // ✅ Finaliza o carregamento depois da verificação
     setIsLoading(false);
   }, []);
 
   const handleLogin = () => {
-    const expiresAt = Date.now() + 60 * 60 * 1000; // 60 minutos
+    // SignIn já salvou token e expires_at via exp do JWT
     localStorage.setItem("authenticated", "true");
-    localStorage.setItem("expires_at", expiresAt.toString());
     setIsAuthenticated(true);
   };
 

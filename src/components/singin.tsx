@@ -4,6 +4,8 @@ import api from "../services/api";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { parseJwtExpMs } from "../utils/jwt";
+
 interface SignInProps {
   onLogin: () => void;
 }
@@ -24,8 +26,9 @@ export default function SignIn({ onLogin }: SignInProps) {
 
       localStorage.setItem("token", token);
       localStorage.setItem("authenticated", "true");
-      const expiresAt = Date.now() + 60 * 60 * 1000;
-      localStorage.setItem("expires_at", expiresAt.toString());
+
+      const expMs = parseJwtExpMs(token);
+      if (expMs > 0) localStorage.setItem("expires_at", String(expMs));
 
       onLogin();
       navigate("/dashboard");
