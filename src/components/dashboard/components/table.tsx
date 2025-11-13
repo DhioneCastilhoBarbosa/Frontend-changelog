@@ -67,6 +67,11 @@ type ConfirmState =
     }
   | { open: false };
 
+type LinkDraft = Partial<ReleaseLink> & {
+  _file?: File | null;
+  _dir?: string | null;
+};
+
 export default function ReleaseTable() {
   const [data, setData] = useState<Release[]>([]);
   const [search, setSearch] = useState("");
@@ -148,7 +153,13 @@ export default function ReleaseTable() {
       type: "link",
       mode: "add",
       release: normalize(r),
-      data: { module: "", description: "", url: "" },
+      data: {
+        module: "",
+        description: "",
+        url: "",
+        _file: null,
+        _dir: "",
+      } as LinkDraft,
     });
 
   const openLinkEdit = (r: Release, l: ReleaseLink) =>
@@ -162,7 +173,9 @@ export default function ReleaseTable() {
         module: l.module,
         description: l.description,
         url: l.url,
-      },
+        _file: null,
+        _dir: "",
+      } as LinkDraft,
     });
 
   const openReleaseEdit = (r: Release) =>
@@ -375,44 +388,94 @@ export default function ReleaseTable() {
     setSaving(true);
     try {
       const rId = modal.release.id;
-      const d = modal.data as Partial<ReleaseLink>;
+      const draft = modal.data as LinkDraft;
+
+      // Validação quando NÃO há arquivo (URL obrigatória)
       const isUrl = (u?: string) => !!u && /^https?:\/\/\S+/i.test(u);
-      if (
-        modal.mode === "add" &&
-        (!d.module || !d.description || !isUrl(d.url))
-      ) {
-        toast.error(
-          "Preencha Módulo, Descrição e uma URL válida (http/https)."
-        );
-        setSaving(false);
-        return;
-      }
-      await putReleaseWith(rId, (fresh) => {
-        const links = [...(fresh.links ?? [])];
-        if (modal.mode === "add") {
-          links.push({
-            id: 0 as any,
-            module: d.module ?? "",
-            description: d.description ?? "",
-            url: d.url ?? "",
-          });
-        } else {
-          for (let i = 0; i < links.length; i++) {
-            if (links[i].id === d.id) {
-              links[i] = {
-                ...links[i],
-                module: d.module ?? links[i].module,
-                description: d.description ?? links[i].description,
-                url: d.url ?? links[i].url,
-              };
-              break;
+      if (!draft._file) {
+        if (
+          modal.mode === "add" &&
+          (!draft.module || !draft.description || !isUrl(draft.url))
+        ) {
+          toast.error(
+            "Preencha Módulo, Descrição e uma URL válida (http/https)."
+          );
+          setSaving(false);
+          return;
+        }
+        // fluxo JSON puro (igual ao seu)
+        await putReleaseWith(rId, (fresh) => {
+          const links = [...(fresh.links ?? [])];
+          if (modal.mode === "add") {
+            links.push({
+              id: 0 as any,
+              module: draft.module ?? "",
+              description: draft.description ?? "",
+              url: draft.url ?? "",
+            });
+          } else {
+            for (let i = 0; i < links.length; i++) {
+              if (links[i].id === draft.id) {
+                links[i] = {
+                  ...links[i],
+                  module: draft.module ?? links[i].module,
+                  description: draft.description ?? links[i].description,
+                  url: draft.url ?? links[i].url,
+                };
+                break;
+              }
             }
           }
+          return { ...fresh, links };
+        });
+        await getData();
+        closeModal();
+        return;
+      }
+
+      // === Fluxo MULTIPART (com arquivo) ===
+      const fresh = await fetchReleaseById(rId);
+
+      // 1) JSON para o backend: removemos o link sendo editado (se "edit"),
+      //    ou mantemos como está (se "add" sem URL) para o upload criar o novo link.
+      const nextJsonBase: Release = (() => {
+        if (modal.mode === "edit") {
+          return {
+            ...fresh,
+            links: (fresh.links ?? []).filter((x) => x.id !== draft.id),
+          };
+        } else {
+          // add: não incluímos o novo link no JSON; ele virá do upload
+          return fresh;
         }
-        return { ...fresh, links };
-      });
+      })();
+
+      // 2) Monta o upload
+      const upload = {
+        file: draft._file!,
+        module: (draft.module || "").trim() || "default",
+        description: (draft.description || "").trim() || "Firmware",
+      };
+
+      // 3) Diretório (use o que você já usa no Postman; pode vir de UI)
+      let dir = (draft._dir || "").trim();
+
+      if (!dir || modal.mode === "edit") {
+        const category = (modal.release.productCategory || "").trim();
+        const name = (modal.release.productName || "").trim();
+        dir = `${category}/${name}`;
+      }
+      await putReleaseMultipart(rId, nextJsonBase, [upload], dir);
+
       await getData();
       closeModal();
+    } catch (err: any) {
+      console.error(
+        "PUT multipart /releases error:",
+        err?.response?.status,
+        err?.response?.data
+      );
+      toast.error(err?.response?.data?.error || "Falha ao enviar arquivo.");
     } finally {
       setSaving(false);
     }
@@ -1215,6 +1278,7 @@ const EditModal = memo(function EditModal({
                 onChange={(e) => setField({ module: e.target.value })}
               />
             </div>
+
             <div>
               <label className="text-xs block mb-1">Descrição</label>
               <textarea
@@ -1225,6 +1289,7 @@ const EditModal = memo(function EditModal({
                 onChange={(e) => setField({ description: e.target.value })}
               />
             </div>
+
             <div>
               <label className="text-xs block mb-1">URL</label>
               <input
@@ -1233,6 +1298,86 @@ const EditModal = memo(function EditModal({
                 onChange={(e) => setField({ url: e.target.value })}
                 placeholder="https://..."
               />
+            </div>
+
+            {/* SELEÇÃO DE ARQUIVO */}
+            <div>
+              <label className="text-xs block mb-1">
+                Arquivo (opcional, substitui a URL)
+              </label>
+
+              <div className="flex items-center gap-3">
+                {/* Botão estilizado que dispara o input real */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById("fileInputHidden")?.click()
+                  }
+                  className="cursor-pointer px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium"
+                >
+                  Selecionar arquivo
+                </button>
+
+                {/* Nome do arquivo selecionado */}
+                <span className="text-sm text-gray-700 truncate max-w-[240px]">
+                  {(modal.data as any)._file
+                    ? (modal.data as any)._file.name
+                    : "Nenhum arquivo selecionado"}
+                </span>
+              </div>
+
+              {/* Input real oculto */}
+              <input
+                id="fileInputHidden"
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file =
+                    e.target.files && e.target.files[0]
+                      ? e.target.files[0]
+                      : null;
+                  setModal((prev) => ({
+                    ...(prev as any),
+                    data: { ...((prev as any).data || {}), _file: file },
+                  }));
+                }}
+              />
+
+              <p className="text-[11px] text-gray-500 mt-1">
+                Se escolher um arquivo, a URL acima será ignorada e o link será
+                criado a partir do upload.
+              </p>
+            </div>
+
+            {/* DIRETÓRIO DE UPLOAD */}
+            <div>
+              <label className="text-xs block mb-1">
+                Diretório de upload (opcional)
+              </label>
+              <input
+                className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm bg-white"
+                placeholder="Ex.: AC/CVE-AC-7kW"
+                value={
+                  (modal.data as any)._dir ||
+                  `${modal.release.productCategory || ""}/${
+                    modal.release.productName || ""
+                  }`
+                }
+                onChange={(e) =>
+                  setModal((prev) => ({
+                    ...(prev as any),
+                    data: {
+                      ...((prev as any).data || {}),
+                      _dir: e.target.value,
+                    },
+                  }))
+                }
+              />
+              <p className="text-[11px] text-gray-500 mt-1">
+                Se vazio, o arquivo vai para o diretório atual{" "}
+                {`"${modal.release.productCategory}/${modal.release.productName}"`}
+                .
+              </p>
             </div>
           </div>
         )}
@@ -1369,4 +1514,61 @@ function ConfirmPortal(props: ConfirmPortalProps) {
   }, []);
   if (!host) return null;
   return createPortal(<ConfirmModal {...props} />, host);
+}
+
+function buildDataJSONForMultipart(
+  base: Release,
+  mutate?: (r: Release) => Release
+) {
+  const r = mutate ? mutate(base) : base;
+  // reaproveita seu builder para manter consistência do payload
+  const json = {
+    version: r.version,
+    previousVersion: r.previousVersion,
+    ota: r.ota,
+    otaObs: r.otaObs || "",
+    releaseDate: r.releaseDate,
+    importantNote: r.importantNote || "",
+    productCategory: r.productCategory,
+    productName: r.productName,
+    status: r.status,
+    modules: (r.modules || []).map((m) => ({
+      module: m.module,
+      version: m.version,
+      updated: m.updated,
+    })),
+    entries: (r.entries || []).map((e) => ({
+      itemOrder: e.itemOrder,
+      classification: e.classification,
+      observation: e.observation,
+    })),
+    links: (r.links || []).map((l) => ({
+      module: l.module,
+      description: l.description,
+      url: l.url,
+    })),
+  };
+  return JSON.stringify(json);
+}
+
+// Envia: data(JSON) + dir + N arquivos + pares linkModule[]/linkDescription[]
+async function putReleaseMultipart(
+  releaseId: number,
+  base: Release,
+  uploads: Array<{ file: File; module: string; description: string }>,
+  dir?: string
+) {
+  const fd = new FormData();
+  // JSON da release (já sem os links que serão substituídos)
+  fd.append("data", buildDataJSONForMultipart(base));
+  if (dir) fd.append("dir", dir);
+
+  uploads.forEach((u) => {
+    fd.append("files[]", u.file);
+    fd.append("linkModule[]", u.module || "default");
+    fd.append("linkDescription[]", u.description || "Firmware");
+  });
+
+  // Não fixe Content-Type. O browser define boundary.
+  await api.put(`/releases/${releaseId}`, fd);
 }
