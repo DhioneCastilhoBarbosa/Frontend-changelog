@@ -315,7 +315,7 @@ export default function ApprovalPage() {
                             className="inline-flex items-center gap-1 text-blue-600 hover:underline"
                           >
                             <FileText className="w-4 h-4" />
-                            <span className="text-xs">Abrir arquivo</span>
+                            <span className="text-xs">Baixar arquivo</span>
                           </a>
                         ) : (
                           <span className="text-xs text-gray-400">Nenhum</span>
