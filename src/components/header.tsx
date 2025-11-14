@@ -114,31 +114,24 @@ export default function Header({
           <button
             onClick={handleLicenca}
             className={`rounded-md p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
-              buttonActive === "Listar" ? "bg-zinc-200 dark:bg-zinc-400/10" : ""
-            }`}
-          >
-            Listar
-          </button>
-          <button
-            onClick={handleChave}
-            className={`rounded-md p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
-              buttonActive === "Cadastrar"
+              buttonActive === "Firmwares"
                 ? "bg-zinc-200 dark:bg-zinc-400/10"
                 : ""
             }`}
           >
-            Cadastrar
+            Firmwares
           </button>
           <button
             onClick={handleChave}
             className={`rounded-md p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
-              buttonActive === "Cadastrar"
+              buttonActive === "Cadastrar Firmwares"
                 ? "bg-zinc-200 dark:bg-zinc-400/10"
                 : ""
             }`}
           >
-            Cadastrar
+            Cadastro de Firmwares
           </button>
+
           <button
             onClick={handleHomologation}
             className={`rounded-md p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
