@@ -16,8 +16,8 @@ export default function Header({
 }: HeaderProps) {
   const [isDark, setIsDark] = useState(false);
   const [buttonActive, setButtonActive] = useState<
-    "Listar" | "Cadastrar" | "Homologação"
-  >("Listar");
+    "Firmwares" | "Cadastrar Firmwares" | "Homologação"
+  >("Firmwares");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useLayoutEffect(() => {
@@ -27,20 +27,20 @@ export default function Header({
   }, [isDark]);
 
   const handleLicenca = () => {
-    setButtonActive("Listar");
+    setButtonActive("Firmwares");
     LogLicense();
     setIsMobileMenuOpen(false);
   };
 
   const handleChave = () => {
-    setButtonActive("Cadastrar");
+    setButtonActive("Cadastrar Firmwares");
     LogKey();
     setIsMobileMenuOpen(false);
   };
 
   const handleSubmit = () => {
     setIsMobileMenuOpen(false);
-    setButtonActive("Listar");
+    setButtonActive("Firmwares");
     LogOut();
   };
 
@@ -63,20 +63,22 @@ export default function Header({
           <button
             onClick={handleLicenca}
             className={`p-2 rounded-md text-sm hover:font-medium hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
-              buttonActive === "Listar" ? "bg-zinc-200 dark:bg-zinc-400/10" : ""
-            }`}
-          >
-            Listar
-          </button>
-          <button
-            onClick={handleChave}
-            className={`p-2 rounded-md text-sm hover:font-medium hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
-              buttonActive === "Cadastrar"
+              buttonActive === "Firmwares"
                 ? "bg-zinc-200 dark:bg-zinc-400/10"
                 : ""
             }`}
           >
-            Cadastrar
+            Firmwares
+          </button>
+          <button
+            onClick={handleChave}
+            className={`p-2 rounded-md text-sm hover:font-medium hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
+              buttonActive === "Cadastrar Firmwares"
+                ? "bg-zinc-200 dark:bg-zinc-400/10"
+                : ""
+            }`}
+          >
+            Cadastro de Firmwares
           </button>
           <button
             onClick={handleHomologation}
