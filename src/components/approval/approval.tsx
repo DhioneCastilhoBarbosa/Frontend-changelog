@@ -124,7 +124,7 @@ export default function ApprovalPage() {
     setModal({ open: true, mode: "add" });
   };
 
-  const openModalEdit = (approval: Approval) => {
+  /*const openModalEdit = (approval: Approval) => {
     setForm({
       establishment: approval.establishment,
       date: approval.date ? approval.date.slice(0, 10) : "",
@@ -134,7 +134,7 @@ export default function ApprovalPage() {
       file: null,
     });
     setModal({ open: true, mode: "edit", approval });
-  };
+  };*/
 
   const closeModal = () => setModal({ open: false });
 
