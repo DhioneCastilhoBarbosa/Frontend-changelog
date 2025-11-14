@@ -15,6 +15,7 @@ import PrivateRoute from "./routes/PrivateRoute";
 import CreateReleaseModal from "./components/register/registerRelease";
 
 import { parseJwtExpMs } from "./utils/jwt";
+import Approval from "./components/approval/approval";
 
 export default function App() {
   const navigate = useNavigate();
@@ -63,6 +64,9 @@ export default function App() {
   const handleChave = () => {
     setIspage("key");
   };
+  const handleHomologation = () => {
+    setIspage("homologation");
+  };
 
   if (isLoading) {
     return (
@@ -95,13 +99,16 @@ export default function App() {
                       LogOut={handleLogout}
                       LogKey={handleChave}
                       LogLicense={handleLicenca}
+                      LogHomologation={handleHomologation}
                     />
                   </header>
                   <main className="flex-1 h-screen overflow-auto">
                     {isPage === "dashboard" ? (
                       <Dashboard />
-                    ) : (
+                    ) : isPage === "key" ? (
                       <CreateReleaseModal />
+                    ) : (
+                      <Approval />
                     )}
                   </main>
                 </>

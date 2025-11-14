@@ -5,13 +5,19 @@ interface HeaderProps {
   LogOut: () => void;
   LogLicense: () => void;
   LogKey: () => void;
+  LogHomologation: () => void;
 }
 
-export default function Header({ LogOut, LogLicense, LogKey }: HeaderProps) {
+export default function Header({
+  LogOut,
+  LogLicense,
+  LogKey,
+  LogHomologation,
+}: HeaderProps) {
   const [isDark, setIsDark] = useState(false);
-  const [buttonActive, setButtonActive] = useState<"Listar" | "Cadastrar">(
-    "Listar"
-  );
+  const [buttonActive, setButtonActive] = useState<
+    "Listar" | "Cadastrar" | "Homologação"
+  >("Listar");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useLayoutEffect(() => {
@@ -36,6 +42,12 @@ export default function Header({ LogOut, LogLicense, LogKey }: HeaderProps) {
     setIsMobileMenuOpen(false);
     setButtonActive("Listar");
     LogOut();
+  };
+
+  const handleHomologation = () => {
+    setButtonActive("Homologação");
+    LogHomologation();
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -65,6 +77,16 @@ export default function Header({ LogOut, LogLicense, LogKey }: HeaderProps) {
             }`}
           >
             Cadastrar
+          </button>
+          <button
+            onClick={handleHomologation}
+            className={`p-2 rounded-md text-sm hover:font-medium hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
+              buttonActive === "Homologação"
+                ? "bg-zinc-200 dark:bg-zinc-400/10"
+                : ""
+            }`}
+          >
+            Homologação
           </button>
         </div>
       </div>
@@ -104,6 +126,26 @@ export default function Header({ LogOut, LogLicense, LogKey }: HeaderProps) {
             }`}
           >
             Cadastrar
+          </button>
+          <button
+            onClick={handleChave}
+            className={`rounded-md p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
+              buttonActive === "Cadastrar"
+                ? "bg-zinc-200 dark:bg-zinc-400/10"
+                : ""
+            }`}
+          >
+            Cadastrar
+          </button>
+          <button
+            onClick={handleHomologation}
+            className={`rounded-md p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-400/10 ${
+              buttonActive === "Homologação"
+                ? "bg-zinc-200 dark:bg-zinc-400/10"
+                : ""
+            }`}
+          >
+            Homologação
           </button>
           <button
             onClick={() => setIsDark(!isDark)}
