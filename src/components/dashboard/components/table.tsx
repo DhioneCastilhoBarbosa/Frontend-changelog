@@ -653,7 +653,7 @@ export default function ReleaseTable() {
                       <td className="px-4 py-3">
                         <button
                           onClick={() => setExpandedId(expanded ? null : r.id)}
-                          className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+                          className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 transition cursor-pointer"
                           aria-expanded={expanded}
                           aria-controls={`release-details-${r.id}`}
                         >
@@ -686,13 +686,13 @@ export default function ReleaseTable() {
                                     <div className="flex gap-2">
                                       <button
                                         onClick={() => openReleaseEdit(r)}
-                                        className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                        className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
                                       >
                                         Editar Release
                                       </button>
                                       <button
                                         onClick={() => askDeleteRelease(r)}
-                                        className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                        className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs cursor-pointer"
                                       >
                                         Excluir Release
                                       </button>
@@ -734,7 +734,7 @@ export default function ReleaseTable() {
                                     <h4 className="font-semibold">Módulos</h4>
                                     <button
                                       onClick={() => openModuleAdd(r)}
-                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
                                     >
                                       Adicionar Módulo
                                     </button>
@@ -787,7 +787,7 @@ export default function ReleaseTable() {
                                                   onClick={() =>
                                                     openModuleEdit(r, m)
                                                   }
-                                                  className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                                  className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
                                                 >
                                                   Editar
                                                 </button>
@@ -795,7 +795,7 @@ export default function ReleaseTable() {
                                                   onClick={() =>
                                                     askDeleteModule(r, m)
                                                   }
-                                                  className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                                  className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs cursor-pointer"
                                                 >
                                                   Excluir
                                                 </button>
@@ -813,7 +813,7 @@ export default function ReleaseTable() {
                                     <h4 className="font-semibold">Registros</h4>
                                     <button
                                       onClick={() => openEntryAdd(r)}
-                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
                                     >
                                       Adicionar Registro
                                     </button>
@@ -844,7 +844,7 @@ export default function ReleaseTable() {
                                                 onClick={() =>
                                                   openEntryEdit(r, e)
                                                 }
-                                                className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                                className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
                                               >
                                                 Editar
                                               </button>
@@ -852,7 +852,7 @@ export default function ReleaseTable() {
                                                 onClick={() =>
                                                   askDeleteEntry(r, e)
                                                 }
-                                                className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
+                                                className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs cursor-pointer"
                                               >
                                                 Excluir
                                               </button>
@@ -872,7 +872,7 @@ export default function ReleaseTable() {
                                     <h4 className="font-semibold">Firmwares</h4>
                                     <button
                                       onClick={() => openLinkAdd(r)}
-                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
+                                      className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
                                     >
                                       Adicionar Firmware
                                     </button>
@@ -929,22 +929,24 @@ export default function ReleaseTable() {
                                                 </a>
                                               </td>
                                               <td className="px-3 py-2 text-right space-x-2">
-                                                <button
-                                                  onClick={() =>
-                                                    openLinkEdit(r, l)
-                                                  }
-                                                  className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs"
-                                                >
-                                                  Editar
-                                                </button>
-                                                <button
-                                                  onClick={() =>
-                                                    askDeleteLink(r, l)
-                                                  }
-                                                  className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs"
-                                                >
-                                                  Excluir
-                                                </button>
+                                                <div className="flex gap-2 ">
+                                                  <button
+                                                    onClick={() =>
+                                                      openLinkEdit(r, l)
+                                                    }
+                                                    className="px-2 py-1 rounded-md border dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-800 text-xs cursor-pointer"
+                                                  >
+                                                    Editar
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      askDeleteLink(r, l)
+                                                    }
+                                                    className="px-2 py-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 text-xs cursor-pointer"
+                                                  >
+                                                    Excluir
+                                                  </button>
+                                                </div>
                                               </td>
                                             </tr>
                                           ))}
